@@ -9,11 +9,15 @@ interface ButtonGuardWrapperProps {
   requiredRoles?: string[];
 }
 
+// GLOBAL CACHE
+let cachedRoles: string[] | null = null;
+let rolesPromise: Promise<string[]> | null = null;
+
 export default function ButtonGuardWrapper({ children, requiredRoles = [] }: ButtonGuardWrapperProps) {
   const { data: session, isPending } = useSession();
+
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
-  const requiredRolesKey = JSON.stringify(requiredRoles);
 
   useEffect(() => {
     if (isPending) return;
@@ -25,29 +29,46 @@ export default function ButtonGuardWrapper({ children, requiredRoles = [] }: But
 
     const checkAuthorization = async () => {
       try {
-        const roles = await getUserRoles(session.user.id);
 
-        // If no roles are required, allow access
-        if (requiredRoles.length === 0) {
-          setIsAuthorized(true);
+        // if roles already fetched
+        if (cachedRoles) {
+          authorize(cachedRoles);
           return;
         }
 
-        // Check if user has ANY required role
-        const hasAnyRole = requiredRoles.some(role => roles.includes(role));
-
-        if (hasAnyRole) {
-          setIsAuthorized(true);
+        // if request already running
+        if (!rolesPromise) {
+          rolesPromise = getUserRoles(session.user.id);
         }
+
+        const roles = await rolesPromise;
+        cachedRoles = roles;
+
+        authorize(roles);
+
       } catch (error) {
-        console.error("Failed to check authorization for button wrapper:", error);
+        console.error("Failed to check authorization:", error);
       } finally {
         setChecking(false);
       }
     };
 
+    const authorize = (roles: string[]) => {
+      if (requiredRoles.length === 0) {
+        setIsAuthorized(true);
+        return;
+      }
+
+      const hasAnyRole = requiredRoles.some(role => roles.includes(role));
+
+      if (hasAnyRole) {
+        setIsAuthorized(true);
+      }
+    };
+
     checkAuthorization();
-  }, [session, isPending, requiredRolesKey, requiredRoles]);
+
+  }, [session, isPending, requiredRoles]);
 
   if (isPending || checking || !isAuthorized) {
     return null;
