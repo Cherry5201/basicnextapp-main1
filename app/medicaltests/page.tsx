@@ -1,6 +1,7 @@
 import { query } from "@/lib/db";
+import MedicalTestsClient from "./MedicalTestsClient";
 
-export default async function MedicalTestsPage() {
+export default async function Page() {
   const result = await query(`
     SELECT 
       mt.id,
@@ -15,33 +16,5 @@ export default async function MedicalTestsPage() {
     ORDER BY mt.id ASC
   `);
 
-  return (
-    <div>
-      <h1>Medical Tests</h1>
-      <table border={1}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Test Name</th>
-            <th>Category</th>
-            <th>Unit</th>
-            <th>Min</th>
-            <th>Max</th>
-          </tr>
-        </thead>
-        <tbody>
-          {result.rows.map((test: any) => (
-            <tr key={test.id}>
-              <td>{test.id}</td>
-              <td>{test.name}</td>
-              <td>{test.category}</td>
-              <td>{test.unit}</td>
-              <td>{test.normalmin}</td>
-              <td>{test.normalmax}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  return <MedicalTestsClient initialData={result.rows} />;
 }
